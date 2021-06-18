@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+        <title>Citibike Map</title>
+
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+              integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+              crossorigin=""/>
+
+         <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+                 integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+                 crossorigin=""></script>
+
+
+         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>     
+
+    </head>
+    <body>
+        <div id="mapid" style='
+            height: 600px;
+            width: 600px;
+        '> </div>
+
+            
+        <script>
+            var map = L.map(
+             'mapid'
+            ).setView([40.783060, -73.971249], 13);
+
+            L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+                id: 'mapbox/streets-v11',
+                preferCanvas: true
+            }).addTo(map);
+        
+            function proxyDataFromEndpoint(endpoint, callback) {
+                jQuery(document).ready(() => {
+                    $.ajax({
+                        url: 'http://cors-reverse-proxy.jaben.io/' + endpoint
+                    }).then((data) => callback(data));
+                });
+            };
+
+            function getStationInformation(callback) {
+                const stationInformationEndpoint = "https://gbfs.citibikenyc.com/gbfs/en/station_information.json";
+                proxyDataFromEndpoint(stationInformationEndpoint, callback);
+            }
+
+            function getStationStatusInformation(callback) {
+                const stationStatusEndpoint = "https://gbfs.citibikenyc.com/gbfs/en/station_status.json";
+                proxyDataFromEndpoint(stationStatusEndpoint, callback);
+            }
+
+            function convertToStationDictionary(data, callback) {
+                stationList = _.get(data, ['data', 'stations'], []);
+                const stationDictArray = _.groupBy(
+                    stationList,
+                    function(station) {
+                        return station.station_id;
+                });
+                const stationDict = _.mapValues(stationDictArray, function(value) {
+                    return value.pop();
+                })
+                callback(stationDict);
+            }
+
+            function getStationInformationDictionary(callback) {
+                getStationInformation(function(stationInformationResponse) {
+                    convertToStationDictionary(stationInformationResponse, callback);
+                });
+            }
+
+            function getStationStatusDictionary(callback) {
+                getStationStatusInformation(function(stationStatusResponse) {
+                    convertToStationDictionary(stationStatusResponse, callback);
+                });
+            }
+
+            function getCombinedStationDictionary(callback) {
+                getStationInformationDictionary(function(stationInformationDictionary) {
+                    getStationStatusDictionary(function(stationStatusDictionary) {
+                        const combinedStationDictionary = _.merge(stationInformationDictionary, stationStatusDictionary);
+                        callback(combinedStationDictionary);
+                    })
+                })
+            }
+            
+            function placeStationPinsOnMap() {
+                getCombinedStationDictionary(function(combinedStationDictionary) {
+                    const combinedStationList = _.values(combinedStationDictionary);
+                    _.forEach(combinedStationList,
+                        function(combinedStation) {
+                            L.marker([combinedStation.lat, combinedStation.lon]).addTo(map)
+                            .bindPopup(
+                                'Name: ' + combinedStation.name + '<br>' +
+                                'Regular Bikes Available: ' + combinedStation.num_bikes_available + '<br>' +
+                                'Electric Bikes Available: ' + combinedStation.num_ebikes_available + '<br>' +
+                                'Docks Available: ' + combinedStation.num_docks_available + '<br>' +
+                                'Capacity: ' + combinedStation.capacity
+                            )
+                    });
+                });
+                
+            }
+            
+            placeStationPinsOnMap();
+
+        </script>
+
+    </body>
+</html>
