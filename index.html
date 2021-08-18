@@ -41,7 +41,7 @@
             function proxyDataFromEndpoint(endpoint, callback) {
                 jQuery(document).ready(() => {
                     $.ajax({
-                        url: 'http://cors-reverse-proxy.jaben.io/' + endpoint
+                        url: 'https://cors-reverse-proxy-jaben-io.herokuapp.com/' + endpoint
                     }).then((data) => callback(data));
                 });
             };
