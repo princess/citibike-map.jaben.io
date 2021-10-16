@@ -11,9 +11,13 @@
               integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
               crossorigin=""/>
 
+        <link rel="stylesheet" href="https://unpkg.com/leaflet-gps@1.7.8/dist/leaflet-gps.min.css" />
+
          <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
                  integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
                  crossorigin=""></script>
+
+        <script src="https://unpkg.com/leaflet-gps@1.7.8/dist/leaflet-gps.min.js"></script>
 
 
          <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -32,6 +36,17 @@
             var map = L.map(
              'mapid'
             ).setView([40.783060, -73.971249], 13);
+
+            var gps = new L.Control.Gps({
+                autoActive:true,
+                autoCenter:true,
+                accuracy: true,
+                setView: true,
+                style: {radius:5,color:'#ffffff',fillColor:'#1a73e8'},
+                maxZoom: 15
+            });
+
+            gps.addTo(map);
 
             L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
                 id: 'mapbox/streets-v11',
