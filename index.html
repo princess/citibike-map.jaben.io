@@ -1,136 +1,312 @@
 <!DOCTYPE html>
-<html>
-    <head>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Citi Bike Live Map</title>
 
-        <title>Citibike Map</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --citibike-blue: #002d72;
+            --citibike-light-blue: #05a9e3;
+            --bg-color: #f8f9fa;
+            --text-color: #1a1a1a;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+        }
 
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-              integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
-              crossorigin=""/>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+        }
 
-        <link rel="stylesheet" href="https://unpkg.com/leaflet-gps@1.7.8/dist/leaflet-gps.min.css" />
+        #mapid {
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+        }
 
-         <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
-                 integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
-                 crossorigin=""></script>
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: var(--panel-bg);
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.3);
+            pointer-events: auto;
+        }
 
-        <script src="https://unpkg.com/leaflet-gps@1.7.8/dist/leaflet-gps.min.js"></script>
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--citibike-blue);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #28a745;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px #28a745;
+            animation: pulse 2s infinite;
+        }
 
-         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
 
-         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>     
+        .stats {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
 
-    </head>
-    <body>
-        <div id="mapid" style='
-            height: 600px;
-            width: 600px;
-        '> </div>
+        /* Custom Popup Styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            padding: 4px;
+        }
 
-            
-        <script>
-            var map = L.map(
-             'mapid'
-            ).setView([40.783060, -73.971249], 13);
+        .leaflet-popup-content {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
 
-            var gps = new L.Control.Gps({
-                autoActive:true,
-                autoCenter:true,
-                accuracy: true,
-                setView: true,
-                style: {radius:5,color:'#ffffff',fillColor:'#1a73e8'},
-                maxZoom: 15
-            });
+        .station-name {
+            font-weight: 700;
+            color: var(--citibike-blue);
+            font-size: 16px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
 
-            gps.addTo(map);
+        .bike-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+        }
 
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        .bike-count {
+            font-weight: 600;
+            color: var(--citibike-light-blue);
+        }
+
+        .locate-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border: none;
+            transition: transform 0.2s;
+        }
+
+        .locate-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .locate-btn svg {
+            fill: var(--citibike-blue);
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .header {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                padding: 12px 16px;
+            }
+            .header h1 { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1><span class="status-dot"></span> Citi Bike Live</h1>
+        <div class="stats" id="station-count">Loading stations...</div>
+    </div>
+
+    <button class="locate-btn" onclick="locateUser()" title="Find my location">
+        <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+    </button>
+
+    <div id="mapid"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Use CodeTabs as a reliable and free CORS proxy in 2026
+        const PROXY = "https://api.codetabs.com/v1/proxy/?quest=";
+        const ENDPOINTS = {
+            info: "https://gbfs.citibikenyc.com/gbfs/en/station_information.json",
+            status: "https://gbfs.citibikenyc.com/gbfs/en/station_status.json"
+        };
+
+        let map, stationLayer;
+        let stations = {};
+
+        function initMap() {
+            // Initialize map with Canvas renderer for performance
+            map = L.map('mapid', {
+                renderer: L.canvas(),
+                zoomControl: false
+            }).setView([40.730610, -73.935242], 13);
+
+            // Add Zoom Control to top right
+            L.control.zoom({ position: 'topright' }).addTo(map);
+
+            // Modern map tiles (CartoDB Positron is cleaner for data maps)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
             }).addTo(map);
 
-            // API key is expired
-            // L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NDg1bDA1cjYzM280NHJ5NzlvNDMifQ.d6e-nNyBDtmQCVwVNivz7A', {
-            //     id: 'mapbox/streets-v11',
-            //     preferCanvas: true
-            // }).addTo(map);
-        
-            function proxyDataFromEndpoint(endpoint, callback) {
-                jQuery(document).ready(() => {
-                    $.ajax({
-                        url: 'https://corsproxy.io/?' + endpoint
-                    }).then((data) => callback(data));
-                });
-            };
+            stationLayer = L.layerGroup().addTo(map);
 
-            function getStationInformation(callback) {
-                const stationInformationEndpoint = "https://gbfs.citibikenyc.com/gbfs/en/station_information.json";
-                proxyDataFromEndpoint(stationInformationEndpoint, callback);
-            }
+            map.on('locationfound', (e) => {
+                L.circle(e.latlng, { radius: e.accuracy / 2 }).addTo(map);
+                L.marker(e.latlng).addTo(map).bindPopup("You are here").openPopup();
+            });
+        }
 
-            function getStationStatusInformation(callback) {
-                const stationStatusEndpoint = "https://gbfs.citibikenyc.com/gbfs/en/station_status.json";
-                proxyDataFromEndpoint(stationStatusEndpoint, callback);
-            }
+        async function fetchData() {
+            try {
+                // CodeTabs returns the raw response body
+                const [infoResRaw, statusResRaw] = await Promise.all([
+                    fetch(PROXY + encodeURIComponent(ENDPOINTS.info)).then(r => r.json()),
+                    fetch(PROXY + encodeURIComponent(ENDPOINTS.status)).then(r => r.json())
+                ]);
 
-            function convertToStationDictionary(data, callback) {
-                stationList = _.get(data, ['data', 'stations'], []);
-                const stationDictArray = _.groupBy(
-                    stationList,
-                    function(station) {
-                        return station.station_id;
-                });
-                const stationDict = _.mapValues(stationDictArray, function(value) {
-                    return value.pop();
-                })
-                callback(stationDict);
-            }
+                // Robust parsing for both raw JSON and AllOrigins/other wrapper formats
+                const infoRes = infoResRaw.contents ? JSON.parse(infoResRaw.contents) : infoResRaw;
+                const statusRes = statusResRaw.contents ? JSON.parse(statusResRaw.contents) : statusResRaw;
 
-            function getStationInformationDictionary(callback) {
-                getStationInformation(function(stationInformationResponse) {
-                    convertToStationDictionary(stationInformationResponse, callback);
-                });
-            }
+                // Map info by station_id
+                const infoMap = {};
+                infoRes.data.stations.forEach(s => infoMap[s.station_id] = s);
 
-            function getStationStatusDictionary(callback) {
-                getStationStatusInformation(function(stationStatusResponse) {
-                    convertToStationDictionary(stationStatusResponse, callback);
-                });
-            }
+                // Combine with status
+                const combined = statusRes.data.stations.map(status => {
+                    const info = infoMap[status.station_id];
+                    return { ...info, ...status };
+                }).filter(s => s.lat && s.lon);
 
-            function getCombinedStationDictionary(callback) {
-                getStationInformationDictionary(function(stationInformationDictionary) {
-                    getStationStatusDictionary(function(stationStatusDictionary) {
-                        const combinedStationDictionary = _.merge(stationInformationDictionary, stationStatusDictionary);
-                        callback(combinedStationDictionary);
-                    })
-                })
+                console.log(`Processing ${combined.length} stations`);
+                renderStations(combined);
+                document.getElementById('station-count').innerText = `${combined.length} stations active`;
+            } catch (err) {
+                console.error("Failed to fetch Citibike data:", err);
+                document.getElementById('station-count').innerText = "Error loading data. Try refreshing.";
             }
-            
-            function placeStationPinsOnMap() {
-                getCombinedStationDictionary(function(combinedStationDictionary) {
-                    const combinedStationList = _.values(combinedStationDictionary);
-                    _.forEach(combinedStationList,
-                        function(combinedStation) {
-                            L.marker([combinedStation.lat, combinedStation.lon]).addTo(map)
-                            .bindPopup(
-                                'Name: ' + combinedStation.name + '<br>' +
-                                'Regular Bikes Available: ' + combinedStation.num_bikes_available + '<br>' +
-                                'Electric Bikes Available: ' + combinedStation.num_ebikes_available + '<br>' +
-                                'Docks Available: ' + combinedStation.num_docks_available + '<br>' +
-                                'Capacity: ' + combinedStation.capacity
-                            )
-                    });
-                });
+        }
+
+        function renderStations(stationList) {
+            stationLayer.clearLayers();
+            console.log("Rendering stations to map...");
+
+            stationList.forEach(station => {
+                const totalBikes = station.num_bikes_available;
+                const isEmpty = totalBikes === 0;
                 
-            }
-            
-            placeStationPinsOnMap();
+                // Safe access to bike types with fallback
+                let classicBikes = 0;
+                let eBikes = 0;
 
-        </script>
+                if (station.num_bikes_available_types) {
+                    classicBikes = station.num_bikes_available_types.classic || 0;
+                    eBikes = station.num_bikes_available_types.ebike || 0;
+                } else {
+                    // Fallback: Total minus e-bikes (if e-bikes field exists elsewhere)
+                    eBikes = station.num_ebikes_available || 0;
+                    classicBikes = Math.max(0, totalBikes - eBikes);
+                }
+                
+                // Color logic
+                let color = '#05a9e3'; // Normal blue
+                if (isEmpty) color = '#ff4757'; // Red for empty
+                if (station.is_renting === 0) color = '#747d8c'; // Grey for inactive
 
-    </body>
+                const marker = L.circleMarker([station.lat, station.lon], {
+                    radius: 6,
+                    fillColor: color,
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+
+                const popupContent = `
+                    <div class="station-name">${station.name}</div>
+                    <div class="bike-row">
+                        <span>Classic Bikes:</span>
+                        <span class="bike-count">${classicBikes}</span>
+                    </div>
+                    <div class="bike-row">
+                        <span>Electric Bikes:</span>
+                        <span class="bike-count">${eBikes}</span>
+                    </div>
+                    <div class="bike-row">
+                        <span>Docks Open:</span>
+                        <span class="bike-count" style="color: #2ed573">${station.num_docks_available}</span>
+                    </div>
+                    <div style="font-size: 10px; color: #999; margin-top: 10px;">
+                        Last Updated: ${new Date(station.last_reported * 1000).toLocaleTimeString()}
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent);
+                marker.addTo(stationLayer);
+            });
+        }
+
+        function locateUser() {
+            map.locate({setView: true, maxZoom: 16});
+        }
+
+        initMap();
+        fetchData();
+
+        // Refresh every 2 minutes
+        setInterval(fetchData, 120000);
+    </script>
+</body>
 </html>
