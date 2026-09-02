@@ -36,6 +36,12 @@
             height: 100%;
             width: 100%;
             z-index: 1;
+            background-color: #e5e9ec; /* Light background for transparent tiles */
+        }
+
+        /* Filter standard OSM tiles to look like Carto Light/Positron */
+        .leaflet-tile-pane {
+            filter: grayscale(100%) opacity(0.7) brightness(1.1);
         }
 
         .header {
