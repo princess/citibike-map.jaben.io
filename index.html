@@ -173,8 +173,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // Use CodeTabs as a reliable and free CORS proxy in 2026
-        const PROXY = "https://api.codetabs.com/v1/proxy/?quest=";
         const ENDPOINTS = {
             info: "https://gbfs.citibikenyc.com/gbfs/en/station_information.json",
             status: "https://gbfs.citibikenyc.com/gbfs/en/station_status.json"
@@ -210,15 +208,10 @@
 
         async function fetchData() {
             try {
-                // CodeTabs returns the raw response body
-                const [infoResRaw, statusResRaw] = await Promise.all([
-                    fetch(PROXY + encodeURIComponent(ENDPOINTS.info)).then(r => r.json()),
-                    fetch(PROXY + encodeURIComponent(ENDPOINTS.status)).then(r => r.json())
+                const [infoRes, statusRes] = await Promise.all([
+                    fetch(ENDPOINTS.info).then(r => r.json()),
+                    fetch(ENDPOINTS.status).then(r => r.json())
                 ]);
-
-                // Robust parsing for both raw JSON and AllOrigins/other wrapper formats
-                const infoRes = infoResRaw.contents ? JSON.parse(infoResRaw.contents) : infoResRaw;
-                const statusRes = statusResRaw.contents ? JSON.parse(statusResRaw.contents) : statusResRaw;
 
                 // Map info by station_id
                 const infoMap = {};
